@@ -23,7 +23,7 @@ def load_images_from_folder(folder):
             images.append(img)
     return images
 
-images = load_images_from_folder("test")
+
 def count_obj(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     contrast = gray.std()
@@ -80,7 +80,9 @@ def draw_contour(images):
     return result
 
 
-show_images(images)
+images = load_images_from_folder("test")
+
+#show_images(images)
 
 output = draw_contour(images)
 
