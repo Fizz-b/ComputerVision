@@ -54,8 +54,7 @@ class BOWHelpers:
 
 		"""
 		print("Start cluster")
-		#self.kmeans_ret = self.kmeans_obj.fit_predict(self.descriptor_vstack)
-		self.kmeans_ret = self.kmeans_obj.fit(self.descriptor_vstack)
+		self.kmeans_ret = self.kmeans_obj.fit_predict(self.descriptor_vstack)
 
 	def developVocabulary(self,n_images, descriptor_list, kmeans_ret = None):
 		
@@ -71,27 +70,16 @@ class BOWHelpers:
 		"""
 		print("Build vocab")
 		self.mega_histogram = np.array([np.zeros(self.n_clusters) for i in range(n_images)])
-		"""
 		old_count = 0
 		for i in range(n_images):
-				l = len(descriptor_list[i])
-				for j in range(l):
+			if descriptor_list[i][1] is not None:
+				for j in range(len(descriptor_list[i])):
 					if kmeans_ret is None:
 						idx = self.kmeans_ret[old_count+j]
 					else:
 						idx = kmeans_ret[old_count+j]
 					self.mega_histogram[i][idx] += 1
-				old_count += l
-		"""
-		for i in range(n_images):
-			for j in range(len(descriptor_list[i])):
-				feature = descriptor_list[i][j]
-				feature = feature.reshape(1, 128)
-				if kmeans_ret is None:
-						idx = self.kmeans_ret.predict(feature)
-				else:
-						idx = kmeans_ret.predict(feature)
-				self.mega_histogram[i][idx] += 1
+				old_count += len(descriptor_list[i])
 		print( "Vocabulary Histogram Generated")
 
 	def standardize(self, std=None):
@@ -130,6 +118,8 @@ class BOWHelpers:
 	def train(self, train_labels):
 		"""
 		uses sklearn.svm.SVC classifier (SVM) 
+
+
 		"""
 		print( "Training SVM")
 		print( self.clf)

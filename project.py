@@ -1,8 +1,10 @@
-from project2 import initFile,initFolder
+from project2.init import initFile,initFolder
 import cv2
 initFolder()
 initFile()
-
+# ```console
+# python train.py --train_path image/train/ --test_path image/test/
+#```
 import numpy as np 
 from glob import glob 
 import argparse
@@ -185,7 +187,7 @@ class BOW:
         print(predictions)
         result=[]
         for prediction in predictions:
-            result.append(test_classes[str(int(prediction))])
+            result.append(self.name_dict[str(int(prediction))])
         print(result)  # output
         #result_classes -actual predict
         
@@ -193,7 +195,7 @@ class BOW:
         accuracy = accuracy_score(result_classes, result)
         print(accuracy)
         
-        plotConfusionMatrix(result_classes, result,classes=test_classes.values())
+        plotConfusionMatrix(result_classes, result,classes=self.name_dict.values())
         plt.show()
         print("Confusion matrixes plotted.")
          

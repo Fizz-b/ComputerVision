@@ -26,3 +26,4 @@ print(descriptors_1.shape)
 print(len(keypoints_1))
 img_1 = cv2.drawKeypoints(gray1,keypoints_1,img1)
 plt.imshow(img_1)
+

@@ -1,1 +1,5 @@
 *.ipynb
+
+coil-100/
+image/
+test/

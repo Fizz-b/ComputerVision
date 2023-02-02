@@ -2,13 +2,4 @@
 
 ## Run
 
-
-```console
-python test.py
-```
-
-
-
-```console
-python project.py --train_path image/train/ --test_path image/test/
-```
+- Readme in each folder for project 1 and project 2 
