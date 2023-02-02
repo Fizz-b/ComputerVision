@@ -2,7 +2,4 @@
 
 ## Run
 
-
-```console
-python test.py
-```
+- Readme in each folder for project 1 and project 2 
