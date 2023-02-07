@@ -21,6 +21,34 @@ def butterworthLP(D0, imgShape, n):
             base[y, x] = 1 / (1 + (distance((y, x), center) / D0) ** (2 * n))
     return base
 
+def notch_filter(img):
+    # transform to Fourier Domain
+
+    IM = np.fft.fft2(img)
+    IMs = np.fft.fftshift(IM)
+    
+    N = IMs.shape[0]
+    x, y = np.meshgrid(np.arange(N), np.arange(N))
+
+    # notch filter generation (need to understand)
+
+    a1 = 0.008
+    a2 = 0.008
+    NF1 = 1 - np.exp(-a1*(x-190)**2 - a2*(y-123)**2) # Gaussian
+    NF2 = 1 - np.exp(-a1*(x-104)**2 - a2*(y-172)**2) # Gaussian
+    NF3 = 1 - np.exp(-a1*(x-126)**2 - a2*(y-135)**2) # Gaussian
+    NF4 = 1 - np.exp(-a1*(x-168)**2 - a2*(y-161)**2) # Gaussian
+
+    Z = NF1*NF2*NF3*NF4
+    IMFs = IMs*Z
+
+    IMFr = np.fft.ifftshift(IMFs)
+    img_back = np.fft.ifft2(IMFr)
+    img_back = np.abs(img_back).astype(np.uint8)
+    #img_back = np.real(img_back)
+    
+    return img_back
+
 def remove_periodic_noise(img):
     # get the frequency domain
     fourier_transform = np.fft.fft2(img)
@@ -31,23 +59,27 @@ def remove_periodic_noise(img):
    # smoothen the vertical lines in the spatial domain =
    # remove the high frequency signals (i.e. horizontal lines) in the frequency domain 
   
-    width,height = img.shape[:]
+    width,height = img.shape[:2]
+    crow,ccol = width // 2, height//2
      # horizontal mask
      # horizontal mask
-    fshift[width-5:width+6, 0:height-10] = 0
-    fshift[width-5:width+6, height+11:] = 0
-    
+    #fshift[crow-2:crow+2, 0: ccol-2] = 1
+    #fshift[crow-2:crow+2, ccol+2:] = 1
+    fshift[crow - 5:crow + 6, 0:ccol - 10] = 0
+    fshift[crow - 5:crow + 6, ccol + 11:] = 0
+
     # get the spatial domain back
     # inverse shift
     f_ishift = np.fft.ifftshift(fshift)
     # inverse furier
     img_back = np.fft.ifft2(f_ishift)
     img_back = np.abs(img_back).astype(np.uint8)
-   
+    #img_back = np.real(img_back)
     
     return img_back
 
-
+#high frequencies in the vertical direction will cause bright dots away from the center in the vertical direction. And that high frequencies in the 
+# horizontal direction will cause bright dots away from the center in the horizontal direction.
 # TODO : doc hieu xem ho lam gi denoisePeriodic
 def denoisePeriodic(img, size_filter=2, diff_from_center_point=50,size_thresh=2):
 
@@ -81,7 +113,6 @@ def denoisePeriodic(img, size_filter=2, diff_from_center_point=50,size_thresh=2)
     # plt.show()
     diff_from_center_point = center_fur*diff_from_center_point/356
     dst[0][:]=dst[1][:]=dst[:][0]=dst[:][1]=0
-
     dst[int(h/2)][int(w/2)]=0
     index = np.where(dst>diff_from_center_point)
     # print("index",index)
@@ -166,11 +197,14 @@ def count_obj(image):
     thres = int(max(h,w)/160)
     
     # remove preiodic noise
-    denoise = denoisePeriodic(gray, size_filter=int(thres/2), diff_from_center_point=50,size_thresh=thres)
-   
-    #denoise = remove_periodic_noise(gray)
-    
- 
+    #denoise = denoisePeriodic(gray, size_filter=int(thres/2), diff_from_center_point=50,size_thresh=thres)
+    denoise = remove_periodic_noise(gray)
+    #denoise = notch_filter(gray)
+    cv2.namedWindow("Resized_Window", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("Resized_Window", 550, 500)
+    cv2.imshow("Resized_Window", denoise)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     contrast = denoise.std()
     median = cv2.medianBlur(denoise,5)
     blur = cv2.GaussianBlur(median, (11,11), 0)
@@ -182,11 +216,11 @@ def count_obj(image):
      equ = blur
     # adaptive thresh hold
     thresh = cv2.adaptiveThreshold(equ,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,199, 5)
- 
-    canny = cv2.Canny(thresh, 30, 100)
-    dilated = cv2.dilate(canny, (1, 1), iterations=0)
+    
+    #canny = cv2.Canny(thresh, 30, 100)
+    #dilated = cv2.dilate(canny, (1, 1), iterations=0)
     cnt, hierarchy = cv2.findContours(
-        dilated.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     rgb2 = cv2.drawContours(rgb, cnt, -1, (0, 255, 0), 2)
     return cnt, rgb2

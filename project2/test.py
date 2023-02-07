@@ -4,11 +4,11 @@ import os
 from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.svm import SVC
 from scipy.cluster.vq import vq
-import joblib
+import pickle
 import time
 from matplotlib import pyplot as plt
 
-clf, classes_name, stdSlr, no_clusters, k_centroid = joblib.load("sift500_coil100.pkl")
+clf, classes_name, stdSlr, no_clusters, k_centroid = pickle.load(open('param.pickle', "rb"))
 def plotConfusionMatrix(y_true, y_pred, classes,
                           title=None,
                           cmap=plt.cm.Blues):
@@ -68,33 +68,33 @@ def getFiles(path,classes_name):
         id += 1
     return [image_paths,image_classes]
 def getDescriptorList(image_paths):
-    # list chứa các descriptor của ảnh
-    descriptor_list = []
-    # sử dụng sift với 128 feature cho mỗi keypoint phát hiện trong ảnh
-    sift = cv2.SIFT_create()
-     # dung surf
-    #sift = cv2.BRISK_create(30)
+    # List descriptor
+    descriptor_list =  []
+    # sift
+    #sift = cv2.SIFT_create()
+    
+    # brisk
+    sift = cv2.BRISK_create()
 
 
-    # Bước này đọc các ảnh và áp dụng sift lên ảnh
+    # Compute feaature
     t1 = time.time()
     for image_path in image_paths:
         img = cv2.imread(image_path)
-        # im = cv2.resize(im, (150,150))
         keypoints, descriptor = sift.detectAndCompute(img, None)
         descriptor_list.append(descriptor)
     t2 = time.time()
-    print("Done feature extraction in %d seconds" %(t2-t1))
+    print("Feature extraction in %d seconds" %(t2-t1))
     return descriptor_list
 
 def extractFeatures(kmeans,descriptor_list,no_clusters,no_images):
     #no_images = len(image_paths)
     im_features = np.zeros((no_images, no_clusters), "float32")
-    # im_features[i][j]: số lượng cụm thứ j xuất hiện ở ảnh thứ i
+    # im_features[i][j]: # of j cluster in picture i 
     for i in range(no_images):
         if descriptor_list[i] is not None:
             indexes, distance = vq(descriptor_list[i], kmeans)
-            # index cua cluster
+           
             for index in indexes:
                 im_features[i][index] += 1
     return im_features
@@ -117,6 +117,6 @@ test_im_features = stdSlr.transform(test_im_features)
 pred = clf.predict(test_im_features)
 accuracy = accuracy_score(test_classes, pred)
 
-plotConfusionMatrix(test_classes, pred,classes)
-plt.show()
+#plotConfusionMatrix(test_classes, pred,classes)
+#plt.show()
 print("Accuracy:"+ str(accuracy*100)+ "%")

@@ -7,7 +7,7 @@ img1 = cv2.imread('obj1.png')
 gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
 
 #keypoints
-sift = cv2.SIFT_create(128)
+sift = cv2.BRISK_create()
 keypoints_1, descriptors_1 = sift.detectAndCompute(img1,None)
 
 """
@@ -25,5 +25,9 @@ keypoints_1, descriptors_1 = sift.detectAndCompute(img1,None)
 print(descriptors_1.shape)
 print(len(keypoints_1))
 img_1 = cv2.drawKeypoints(gray1,keypoints_1,img1)
-plt.imshow(img_1)
-
+# Using resizeWindow()
+cv2.namedWindow("Resized_Window", cv2.WINDOW_NORMAL)
+cv2.resizeWindow("Resized_Window",300, 300)
+cv2.imshow("Resized_Window", img_1)
+cv2.waitKey(0)
+cv2.destroyAllWindows()

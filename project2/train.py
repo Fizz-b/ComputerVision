@@ -9,12 +9,12 @@ import cv2
 import numpy as np
 import os
 import time
-cv2.__version__
 
-# 1 Đọc. ảnh vào và tìm các descriptor
-# path tới folder ảnh train
+
+# 1 Read image
+
 train_path = 'image/train'
-# list các classes
+
 classes_name = os.listdir(train_path)
 
 
@@ -40,23 +40,23 @@ def getFiles(path,classes_name):
 
 
 def getDescriptorList(image_paths):
-    # list chứa các descriptor của ảnh
+    # List descriptor
     descriptor_list = []
-    # sử dụng sift với 128 feature cho mỗi keypoint phát hiện trong ảnh
-    sift = cv2.SIFT_create()
-     # dung surf
-    #sift = cv2.BRISK_create(30)
+    # sift
+    #sift = cv2.SIFT_create()
+    
+    # brisk
+    sift = cv2.BRISK_create()
 
 
-    # Bước này đọc các ảnh và áp dụng sift lên ảnh
+    # Compute feaature
     t1 = time.time()
     for image_path in image_paths:
         img = cv2.imread(image_path)
-        # im = cv2.resize(im, (150,150))
         keypoints, descriptor = sift.detectAndCompute(img, None)
         descriptor_list.append(descriptor)
     t2 = time.time()
-    print("Done feature extraction in %d seconds" %(t2-t1))
+    print("Feature extraction in %d seconds" %(t2-t1))
     return descriptor_list
 
 
@@ -72,14 +72,15 @@ def vstackDescriptors(descriptor_list):
 
 
 from scipy.cluster.vq import kmeans, vq
-no_clusters = 500
-# phân thành 500 cụm, giá trị voc trả về là 500 center của 500 cụm
+no_clusters = 800
+print(no_clusters)
+# cluster k , centroid : k center of k clusters
 def clusterDescriptor(descriptors,no_clusters):
-    t3 = time.time()
+    t1 = time.time()
     centroids, _ = kmeans(descriptors, no_clusters, 1)
     # centroids, _
-    t4 = time.time()
-    print("Done clustering in %d seconds" %(t4-t3))
+    t2 = time.time()
+    print("Clustering in %d seconds" %(t2-t1))
     return centroids
 
 
@@ -88,11 +89,11 @@ def clusterDescriptor(descriptors,no_clusters):
 def extractFeatures(kmeans,descriptor_list,no_clusters,no_images):
     #no_images = len(image_paths)
     im_features = np.zeros((no_images, no_clusters), "float32")
-    # im_features[i][j]: số lượng cụm thứ j xuất hiện ở ảnh thứ i
+    # im_features[i][j]: # of j cluster in picture i 
     for i in range(no_images):
         if descriptor_list[i] is not None:
             indexes, distance = vq(descriptor_list[i], kmeans)
-            # index cua cluster
+           
             for index in indexes:
                 im_features[i][index] += 1
     return im_features
@@ -134,65 +135,41 @@ def svcParamSelection(X, y, nfolds):
 		grid_search.fit(X, y)
 		return grid_search
 
-# list chứa đường dẫn tới các ảnh và class tương ứng
+
 image_paths,image_classes= getFiles(train_path,classes_name)
 
 descriptor_list = getDescriptorList(image_paths)
 
 descriptors = vstackDescriptors(descriptor_list)
 
-# 2. Phân cụm các descriptor
-# phân cụm các descriptor
+# 2. Clusteering
+# k centroid
 k_centroid = clusterDescriptor(descriptors,no_clusters)
 
-# 3. Xây dựng tập BOW(tần suất xuất hiện của các cụm đã phân cụm ở trên ở từng ảnh)
+# 3. Build bow
 no_images = len(image_paths)
 im_features = extractFeatures(k_centroid,descriptor_list,no_clusters,no_images)
 
-# chuẩn hóa histogram feature về mean = 0 và std = 1
+# standardlize
 stdSlr,im_features = standardize(im_features)
 
 plotHistogram(im_features, no_clusters)
 print("Features histogram plotted.")
 
-# 4. Phân loại
-# sử dụng SVM để phân train
-# Tìm ra bộ tham số tốt nhất
-t5 = time.time()
+# 4. Classification
+t1 = time.time()
 train_labels = np.array(image_classes)
 gsSVM= svcParamSelection(im_features,train_labels ,5)
-t6 = time.time()
-print("Done classify in %d seconds" %(t6-t5))
+t2 = time.time()
+print("Classify in %d seconds" %(t2-t1))
 
 
-print("Best param:"+ gsSVM.best_params_)
+print("Best param")
+print(gsSVM.best_params_)
 print(gsSVM.best_score_)
 print( "Training completed")
 
 # lưu lại mô hình
-import joblib
-joblib.dump((gsSVM.best_estimator_, classes_name, stdSlr, no_clusters, k_centroid), "sift500_coil100.pkl", compress=3)
+import pickle
+pickle.dump((gsSVM.best_estimator_, classes_name, stdSlr, no_clusters, k_centroid), open('param.pickle', "wb"))
 
-"""
-
-clf = gsSVM.best_estimator_
-test_path = 'coil-100-BOW/test'
-test_paths = []
-test_classes = []
-test_id = 0
-
-print("Start testing")
-test_paths,test_classes,test_id = getFiles(test_path,classes_name)
-test_descriptor_list = getDescriptorList(test_paths)
-
-test_descriptors = vstackDescriptors(test_descriptor_list)
-test_k_centroid = clusterDescriptor(test_descriptors,no_clusters)
-# 3. Xây dựng tập BOW(tần suất xuất hiện của các cụm đã phân cụm ở trên ở từng ảnh)
-test_im_features = extractFeatures(test_k_centroid,test_descriptor_list,no_clusters)
-# standardlize
-test_im_features = stdSlr.transform(test_im_features)
-
-pred = clf.predict(test_im_features)
-accuracy = accuracy_score(test_classes, pred)
-print(accuracy)
-    """
